@@ -14,10 +14,6 @@ jobs:
           fetch-depth: 0
           ref: main
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
 
       - name: Fetch all branches
         run: git fetch origin
