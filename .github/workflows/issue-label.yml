@@ -1,0 +1,59 @@
+name: Check and Create Issue Label
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  label-issue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if label exists
+        id: check-label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          LABEL_NAME: automated
+        run: |
+          if gh label list \
+            --repo "$REPO" \
+            --search "$LABEL_NAME" \
+            --json name \
+            --jq ".[] | select(.name == \"$LABEL_NAME\") | .name" | grep -Fxq "$LABEL_NAME"; then
+              echo "Label '$LABEL_NAME' already exists."
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+              echo "Label '$LABEL_NAME' does not exist."
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create label
+        if: steps.check-label.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          LABEL_NAME: automated
+        run: |
+          echo "Creating label '$LABEL_NAME'..."
+
+          gh label create "$LABEL_NAME" \
+            --repo "$REPO" \
+            --description "Automatically created label" \
+            --color "1D76DB"
+
+      - name: Assign label to issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABEL_NAME: automated
+        run: |
+          echo "Assigning '$LABEL_NAME' to issue #$ISSUE_NUMBER..."
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPO" \
+            --add-label "$LABEL_NAME"
